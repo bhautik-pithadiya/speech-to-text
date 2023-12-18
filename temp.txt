@@ -1,0 +1,7 @@
+[program:fastapi-app]
+command=/home/ksuser/Bhautik/APIs/Speech_to_text_api/gunicorn_start
+user=fastapi-user
+autostart=true
+autorestart=true
+redirect_stderr=true
+stdout_logfile=/home/ksuser/Bhautik/APIs/Speech_to_text_api/gunicorn-error.log
