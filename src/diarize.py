@@ -14,10 +14,17 @@ import time
 from datetime import timedelta
 from numba import cuda
 import contractions
+import concurrent.futures
+import multiprocessing
+from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from itertools import islice
+import tensorflow as tf
+from numba import jit
 # Name of the audio file ---> Change it to folder path containing multiple audio files.
 #audio_path = "/home/ksuser/LS/APAK.ai-main/audio_files/1696528455061_1000085836312_1012_2224792.mp3"
 
-torch.set_num_threads(6)
+torch.set_num_threads(8)
 
 # Whether to enable music removal from speech, helps increase diarization quality but uses alot of ram
 enable_stemming = False
@@ -26,7 +33,7 @@ enable_stemming = False
 whisper_model_name = "medium.en"
 
 # replaces numerical digits with their pronounciation, increases diarization accuracy 
-suppress_numerals = True 
+suppress_numerals = False 
 
 #models
 
@@ -37,14 +44,21 @@ def init_models():
     whisper_model = WhisperModel(whisper_model_name, device="cpu", compute_type="int8")
     msdd_model = NeuralDiarizer(cfg=create_config(temp_path)).to("cpu")
     punct_model = PunctuationModel(model="kredor/punctuate-all")
-    return whisper_model, msdd_model, punct_model 
+    return whisper_model, msdd_model, punct_model
+
+
+def whisper_results_fn(segments):
+    results = []
+    for segment in segments:
+        results.append(segment._asdict())
+    return results
 
 
 def process(audio_path, whisper_model, msdd_model, punct_model):
     
 #    audio_files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith(".mp3") or f.endswith(".wav")]
 
-    startTime = time.time()
+    
     # if enable_stemming:
     #     # Isolate vocals from the rest of the audio
 
@@ -62,7 +76,7 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     # else:
     
     vocal_target = audio_path
-    
+    startTime = time.time()
     # Run on GPU with FP16
     # whisper_model = WhisperModel(whisper_model_name, device="cuda", compute_type="int8")
     # or run on GPU with INT8
@@ -73,23 +87,55 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
         numeral_symbol_tokens = find_numeral_symbol_tokens(whisper_model.hf_tokenizer)
     else:
         numeral_symbol_tokens = None
-
+    startTime1 = time.time()
     segments, info = whisper_model.transcribe(
         vocal_target,
         beam_size=5,
-        word_timestamps=True,
+        word_timestamps=False,
         suppress_tokens=numeral_symbol_tokens,
-        vad_filter=True,
+        vad_filter=False,
     )
+    print('out of whisper.transcribe')
     whisper_results = []
     toal_info = []
-    for segment in segments:
-        whisper_results.append(segment._asdict())
+    
+    # segment_list = list(segments)
+    # print('In for loop')
+    
+    # for segment in segments:
+    #     whisper_results.append(segment._asdict())
+    # start = time.time()
+    # batch_size = 5  # Adjust the batch size as needed
+    # i = 1
+    # start = time.time()
+    # for chunk in iter(lambda: list(islice(segments, batch_size)), []):
+    #     print(f'{5 * i}')
+    #     for segment in chunk:
+    #         whisper_results.append(segment._asdict())
+    #     i+=1
+    # end = time.time()
+    
+    start = time.time()
+    
+    # N = 8
+    # with ThreadPool(N) as pool:
+    #     pool.apply_async(whisper_results_fn, args = (segments,))
+    #     pool.close()
+    #     pool.join()
+    
+    # with ProcessPoolExecutor(24) as exe:
+    #     whisper_results = exe.map(whisper_results_fn, segments)
+    # print(sum(1 for _ in segments))
+    batch_size = 5
+    for chunk in iter(lambda: list(islice(segments, batch_size)), []):
+        print(type(chunk))
+    end = time.time()
+    print('Total time in loop - ' ,str(timedelta(seconds= end - start)))
+    # print(whisper_results)
+    with open('res_.json', 'w') as json_file:
+        json.dump(segments._asdict(), json_file)          
         
-    # clear gpu vram
-    # del whisper_model
-    # torch.cuda.empty_cache()
-
+            
     if info.language in wav2vec2_langs:
         device = "cpu"
         alignment_model, metadata = whisperx.load_align_model(
@@ -109,7 +155,7 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
             for word in segment["words"]:
                 word_timestamps.append({"word": word[2], "start": word[0], "end": word[1]})
 
-
+    print('out of if else')
     sound = AudioSegment.from_file(vocal_target).set_channels(1)
     
     ROOT = os.getcwd()
@@ -190,20 +236,27 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     expanded_string = []
     for word in final_string.split():
         expanded_string.append(contractions.fix(word))
+    endTime = time.time()
+    print("Time taken:", str(timedelta(seconds=endTime - startTime)))
+    
     return " ".join(expanded_string)
 
     
-    with open(f"{audio_path[:-4]}.txt", "w", encoding="utf-8-sig") as f:
-        get_speaker_aware_transcript(ssm, f)
+    #with open(f"{audio_path[:-4]}.txt", "w", encoding="utf-8-sig") as f:
+    #    get_speaker_aware_transcript(ssm, f)
         
     # with open(f"{audio_path[:-4]}.srt", "w", encoding="utf-8-sig") as srt:
     #     write_srt(ssm, srt)
     
-    endTime = time.time()
-    print("Time taken:", str(timedelta(seconds=endTime - startTime)))
     
     # cleanup(temp_path)
     
     # del punct_model
     # torch.cuda.empty_cache()
+    
+    
+    ssm = get_sentences_speaker_mapping(wsm, speaker_ts)
+    # print(ssm)
+    # print(get_speaker_aware_transcript(ssm,))
+    
     

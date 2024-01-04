@@ -1,0 +1,48 @@
+[
+    {
+        "approach": "normal",
+        "audio_time": "15:44",
+        "convertion_to_list_of_dict": "5:58"
+    },
+    {
+        "approach": "batch_wise",
+        "audio_time": "15:44",
+        "convertion_to_list_of_dict": [
+            {
+                "batch": "50",
+                "time": "5:54"
+            },
+            {
+                "batch": "100",
+                "time": "5:54"
+            }
+        ]
+    },
+    {
+        "approach": "tensorflow",
+        "audio_time": "15:44",
+        "convertion_to_list_of_dict": "5:48"
+    },
+    {
+        "approach": "numba jit",
+        "audio_time": "15:44",
+        "convertion_to_list_of_dict": "6:15"
+    },
+    {
+        "approach": "njit",
+        "audio_time": "15:44",
+        "convertion_to_list_of_dict": ""
+    },
+    {
+        "approach": "Multithreading - Thread Pool",
+        "audio_time": "15:44",
+        "convertion_to_list_of_dict": "6:06"
+    },
+    
+    {
+        "approach": "ProcessPoolExecutor",
+        "audio_time": "15:44",
+        "convertion_to_list_of_dict": "6:08"
+    }
+    
+]
