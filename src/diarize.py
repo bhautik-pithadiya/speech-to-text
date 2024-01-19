@@ -24,7 +24,7 @@ from numba import jit
 # Name of the audio file ---> Change it to folder path containing multiple audio files.
 #audio_path = "/home/ksuser/LS/APAK.ai-main/audio_files/1696528455061_1000085836312_1012_2224792.mp3"
 
-torch.set_num_threads(8)
+torch.set_num_threads(5)
 
 # Whether to enable music removal from speech, helps increase diarization quality but uses alot of ram
 enable_stemming = False
@@ -56,25 +56,6 @@ def whisper_results_fn(segments):
 
 def process(audio_path, whisper_model, msdd_model, punct_model):
     
-#    audio_files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith(".mp3") or f.endswith(".wav")]
-
-    
-    # if enable_stemming:
-    #     # Isolate vocals from the rest of the audio
-
-    #     return_code = os.system(
-    #         f'python3 -m demucs.separate -n htdemucs --two-stems=vocals "{audio_path}" -o "temp_outputs"'
-    #     )
-
-    #     if return_code != 0:
-    #         logging.warning("Source splitting failed, using original audio file.")
-    #         vocal_target = audio_path
-    #     else:
-    #         vocal_target = os.path.join(
-    #             "temp_outputs", "htdemucs", os.path.basename(audio_path[:-4]), "vocals.wav"
-    #         )
-    # else:
-    
     vocal_target = audio_path
     startTime = time.time()
     # Run on GPU with FP16
@@ -100,10 +81,14 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     toal_info = []
     
     # segment_list = list(segments)
-    # print('In for loop')
-    
-    # for segment in segments:
-    #     whisper_results.append(segment._asdict())
+    print('In for loop')
+    start = time.time()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+        whisper_results = executor.map(whisper_results_fn,segments,chunksize=12)
+
+    print(whisper_results)
+    print(str(timedelta(seconds=time.time() - start)))
+    exit()
     # start = time.time()
     # batch_size = 5  # Adjust the batch size as needed
     # i = 1
@@ -115,25 +100,34 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     #     i+=1
     # end = time.time()
     
-    start = time.time()
     
-    # N = 8
-    # with ThreadPool(N) as pool:
-    #     pool.apply_async(whisper_results_fn, args = (segments,))
-    #     pool.close()
-    #     pool.join()
     
-    # with ProcessPoolExecutor(24) as exe:
-    #     whisper_results = exe.map(whisper_results_fn, segments)
-    # print(sum(1 for _ in segments))
-    batch_size = 5
-    for chunk in iter(lambda: list(islice(segments, batch_size)), []):
-        print(type(chunk))
+    
+    # import cProfile
+    # def segLoop(segments=segments):
+    #     whisper_results = []
+    #     for segment in segments:
+    #         whisper_results.append(segment._asdict())
+    
+    
+    # cProfile.run("segLoop()")
+    # whisper_results = list(segments)
+    # iterable_segment = iter(segments)
+    # while True:
+    #     try:
+    #         text = next(iterable_segment)
+    #     except StopIteration:
+    #         break
+    #     else:
+    #         whisper_results.append(text._asdict())
+        
     end = time.time()
     print('Total time in loop - ' ,str(timedelta(seconds= end - start)))
     # print(whisper_results)
-    with open('res_.json', 'w') as json_file:
-        json.dump(segments._asdict(), json_file)          
+    with open('res_decorator.json', 'w') as json_file:
+        json.dump(whisper_results,json_file)
+    # with open('res_.json', 'w') as json_file:
+    #     json.dump(segments._asdict(), json_file)          
         
             
     if info.language in wav2vec2_langs:
