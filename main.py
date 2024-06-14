@@ -3,21 +3,37 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from tempfile import NamedTemporaryFile
 from fastapi import HTTPException
-from src import diarize_parallel
-from src import *
 from pathlib import Path
+import logging
+
+from summary_sentiment import summarize,sentiment
+
+from src import diarize
+from src import *
 
 
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 app = FastAPI()
 templates = Jinja2Templates(directory="templates/")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-whisper_model, punct_model = diarize_parallel.init_models()
 
-app.mount(
-    "/static",
-    StaticFiles(directory=Path(__file__).parent.parent.absolute() / "Speech_to_text_api/static"),
-    name="static",
-)
+logger.info("            Loading Diarize Models")
+whisper_model, msdd_model, punct_model = diarize.init_models()
+
+logger.info("            Loading Summarization Model")
+summ_model = summarize.Model(model_dict = "summary_sentiment/MEETING-SUMMARY-BART-LARGE-XSUM-SAMSUM-DIALOGSUM-AMI")
+# summ_model = summarize.Model()
+
+logger.info("            Loading Sentiment Model")
+sentiToken, sentiModel = sentiment.load_sentiment_model()
+logger.info("            Model Loading Complete")
+
+
+
 @app.get("/")
 def form_post(request: Request):
     try : 
@@ -35,8 +51,25 @@ def form_post(audioFile: UploadFile = File(...)):
                 with open(temp.name, 'wb') as temp_file:
                     temp_file.write(audioFile.file.read())
         
-                transcript = diarize_parallel.process(temp.name,whisper_model,punct_model)
-            return {'Transcript ': transcript}
+                transcript = diarize.process(temp.name,whisper_model,msdd_model, punct_model)
+            
+            logger.info("            Now Summarizing Convesations")
+            text = summ_model.clean_text(transcript)
+            
+            generated_summary = summ_model.summary(text)
+            
+            if generated_summary!="":
+                logger.info("            Summary Generated.")
+                
+            logger.info("            Sentiment Analysis")
+            
+            generated_sentiment = sentiment.inference(generated_summary,sentiToken,sentiModel)
+            logger.info("            Analysis Done.")
+            
+            return {'Transcript ': transcript,"Summary":generated_summary,'Sentiment':generated_sentiment}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+if __name__ == "__main__":
+    import uvicorn 
+    uvicorn.run(app,port=8000,host="0.0.0.0")
