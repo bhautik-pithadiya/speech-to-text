@@ -14,10 +14,17 @@ import time
 from datetime import timedelta
 from numba import cuda
 import contractions
+import concurrent.futures
+import multiprocessing
+from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from itertools import islice
+import tensorflow as tf
+from numba import jit
 # Name of the audio file ---> Change it to folder path containing multiple audio files.
 #audio_path = "/home/ksuser/LS/APAK.ai-main/audio_files/1696528455061_1000085836312_1012_2224792.mp3"
 
-torch.set_num_threads(6)
+torch.set_num_threads(5)
 
 # Whether to enable music removal from speech, helps increase diarization quality but uses alot of ram
 enable_stemming = False
@@ -26,7 +33,7 @@ enable_stemming = False
 whisper_model_name = "medium.en"
 
 # replaces numerical digits with their pronounciation, increases diarization accuracy 
-suppress_numerals = True 
+suppress_numerals = False 
 
 #models
 
@@ -37,32 +44,20 @@ def init_models():
     whisper_model = WhisperModel(whisper_model_name, device="cpu", compute_type="int8")
     msdd_model = NeuralDiarizer(cfg=create_config(temp_path)).to("cpu")
     punct_model = PunctuationModel(model="kredor/punctuate-all")
-    return whisper_model, msdd_model, punct_model 
+    return whisper_model, msdd_model, punct_model
+
+
+def whisper_results_fn(segments):
+    results = []
+    for segment in segments:
+        results.append(segment._asdict())
+    return results
 
 
 def process(audio_path, whisper_model, msdd_model, punct_model):
     
-#    audio_files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith(".mp3") or f.endswith(".wav")]
-
-    startTime = time.time()
-    # if enable_stemming:
-    #     # Isolate vocals from the rest of the audio
-
-    #     return_code = os.system(
-    #         f'python3 -m demucs.separate -n htdemucs --two-stems=vocals "{audio_path}" -o "temp_outputs"'
-    #     )
-
-    #     if return_code != 0:
-    #         logging.warning("Source splitting failed, using original audio file.")
-    #         vocal_target = audio_path
-    #     else:
-    #         vocal_target = os.path.join(
-    #             "temp_outputs", "htdemucs", os.path.basename(audio_path[:-4]), "vocals.wav"
-    #         )
-    # else:
-    
     vocal_target = audio_path
-    
+    startTime = time.time()
     # Run on GPU with FP16
     # whisper_model = WhisperModel(whisper_model_name, device="cuda", compute_type="int8")
     # or run on GPU with INT8
@@ -73,23 +68,68 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
         numeral_symbol_tokens = find_numeral_symbol_tokens(whisper_model.hf_tokenizer)
     else:
         numeral_symbol_tokens = None
-
+    startTime1 = time.time()
     segments, info = whisper_model.transcribe(
         vocal_target,
         beam_size=5,
-        word_timestamps=True,
+        word_timestamps=False,
         suppress_tokens=numeral_symbol_tokens,
-        vad_filter=True,
+        vad_filter=False,
     )
+    print('out of whisper.transcribe')
     whisper_results = []
     toal_info = []
-    for segment in segments:
-        whisper_results.append(segment._asdict())
-        
-    # clear gpu vram
-    # del whisper_model
-    # torch.cuda.empty_cache()
+    
+    # segment_list = list(segments)
+    print('In for loop')
+    start = time.time()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+        whisper_results = executor.map(whisper_results_fn,segments,chunksize=12)
 
+    print(whisper_results)
+    print(str(timedelta(seconds=time.time() - start)))
+    exit()
+    # start = time.time()
+    # batch_size = 5  # Adjust the batch size as needed
+    # i = 1
+    # start = time.time()
+    # for chunk in iter(lambda: list(islice(segments, batch_size)), []):
+    #     print(f'{5 * i}')
+    #     for segment in chunk:
+    #         whisper_results.append(segment._asdict())
+    #     i+=1
+    # end = time.time()
+    
+    
+    
+    
+    # import cProfile
+    # def segLoop(segments=segments):
+    #     whisper_results = []
+    #     for segment in segments:
+    #         whisper_results.append(segment._asdict())
+    
+    
+    # cProfile.run("segLoop()")
+    # whisper_results = list(segments)
+    # iterable_segment = iter(segments)
+    # while True:
+    #     try:
+    #         text = next(iterable_segment)
+    #     except StopIteration:
+    #         break
+    #     else:
+    #         whisper_results.append(text._asdict())
+        
+    end = time.time()
+    print('Total time in loop - ' ,str(timedelta(seconds= end - start)))
+    # print(whisper_results)
+    with open('res_decorator.json', 'w') as json_file:
+        json.dump(whisper_results,json_file)
+    # with open('res_.json', 'w') as json_file:
+    #     json.dump(segments._asdict(), json_file)          
+        
+            
     if info.language in wav2vec2_langs:
         device = "cpu"
         alignment_model, metadata = whisperx.load_align_model(
@@ -109,7 +149,7 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
             for word in segment["words"]:
                 word_timestamps.append({"word": word[2], "start": word[0], "end": word[1]})
 
-
+    print('out of if else')
     sound = AudioSegment.from_file(vocal_target).set_channels(1)
     
     ROOT = os.getcwd()
@@ -190,20 +230,27 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     expanded_string = []
     for word in final_string.split():
         expanded_string.append(contractions.fix(word))
+    endTime = time.time()
+    print("Time taken:", str(timedelta(seconds=endTime - startTime)))
+    
     return " ".join(expanded_string)
 
     
-    with open(f"{audio_path[:-4]}.txt", "w", encoding="utf-8-sig") as f:
-        get_speaker_aware_transcript(ssm, f)
+    #with open(f"{audio_path[:-4]}.txt", "w", encoding="utf-8-sig") as f:
+    #    get_speaker_aware_transcript(ssm, f)
         
     # with open(f"{audio_path[:-4]}.srt", "w", encoding="utf-8-sig") as srt:
     #     write_srt(ssm, srt)
     
-    endTime = time.time()
-    print("Time taken:", str(timedelta(seconds=endTime - startTime)))
     
     # cleanup(temp_path)
     
     # del punct_model
     # torch.cuda.empty_cache()
+    
+    
+    ssm = get_sentences_speaker_mapping(wsm, speaker_ts)
+    # print(ssm)
+    # print(get_speaker_aware_transcript(ssm,))
+    
     
