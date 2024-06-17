@@ -1,3 +1,7 @@
+from src import diarize
+from src import *
+import time
+from datetime import timedelta
 import os
 import wget
 import json
@@ -9,8 +13,8 @@ from pydub import AudioSegment
 from nemo.collections.asr.models.msdd_models import NeuralDiarizer
 from deepmultilingualpunctuation import PunctuationModel
 import re
-# from src import *
-from . import *
+from src import *
+# from . import *
 import time
 from datetime import timedelta
 from numba import cuda
@@ -22,6 +26,13 @@ from multiprocessing.pool import ThreadPool
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from itertools import islice
 from numba import jit
+import torchaudio
+from multiprocessing import Pool
+# "/home/ksuser/Documents/conversationTranscribe/data/input_audio/1696528084008_1000022968016_1022_2224792_100.mp3"
+
+
+path = "./1696528151059_1000050599709_1028_2224792.mp3"
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 logging.basicConfig(level=logging.INFO)
@@ -53,6 +64,22 @@ def init_models():
     punct_model = PunctuationModel(model="kredor/punctuate-all")
     return whisper_model, msdd_model, punct_model
 
+def load_audio(audio_path):
+    waveform, sample_rate = torchaudio.load(audio_path)
+    return waveform.to(device), sample_rate
+
+
+def transcribe_on_gpu(model, audio_path, **kwargs):
+    # Load and move audio data to GPU
+    waveform, sample_rate = load_audio(audio_path)
+    
+    # Perform transcription
+    segments, _ = model.transcribe(waveform, **kwargs)
+    
+    # Process segments (this part runs on CPU, ensure efficient transfer)
+    whisper_results = [segment._asdict() for segment in segments]
+    
+    return whisper_results
 
 def process(audio_path, whisper_model, msdd_model, punct_model):
     
@@ -65,22 +92,33 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
         numeral_symbol_tokens = None
         
     startTime1 = time.time()
-    segments, info = whisper_model.transcribe(
+    
+    whisper_results = transcribe_on_gpu(
+        whisper_model,
         vocal_target,
         beam_size=5,
         word_timestamps=False,
         suppress_tokens=numeral_symbol_tokens,
-        vad_filter=False,
-    )
-    logger.info('       Out of Whisper.transcribe')
-    whisper_results = []
-    toal_info = []
+        vad_filter=False,)
     
-    start = time.time()
-    for segment in segments:
-        whisper_results.append(segment._asdict())        
-    end = time.time()
-    print('Total time in loop - ' ,str(timedelta(seconds= end - start)))      
+    print(whisper_results)
+    # segments, info = whisper_model.transcribe(
+    #     vocal_target,
+    #     beam_size=5,
+    #     word_timestamps=False,
+    #     suppress_tokens=numeral_symbol_tokens,
+    #     vad_filter=False,
+    # )
+    
+    # logger.info('       Out of Whisper.transcribe')
+    # whisper_results = []
+    # toal_info = []
+    
+    # start = time.time()
+    # for segment in segments:
+    #     whisper_results.append(segment._asdict())        
+    # end = time.time()
+    # print('Total time in loop - ' ,str(timedelta(seconds= end - start)))      
         
             
     if info.language in wav2vec2_langs:
@@ -165,18 +203,13 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
         )
 
     ssm = get_sentences_speaker_mapping(wsm, speaker_ts)
-    # print(ssm)
-    # print(get_speaker_aware_transcript(ssm,))
-    # final_output = []
-    # for details in ssm:
-    #     final_output.append(f"{details['speaker']} : {details['text']}")
+
     final_string = ''
     previous = ''
     for details in ssm:
         curr = details['speaker']
         if previous != curr:
             final_string += details['speaker'] + ": " + details['text']
-            # final_output.append(f"{details['speaker']} : {details['text']}")
         else:
             final_string += details['text']
         previous = curr
@@ -189,27 +222,11 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     return " ".join(expanded_string)
 
     
-    #with open(f"{audio_path[:-4]}.txt", "w", encoding="utf-8-sig") as f:
-    #    get_speaker_aware_transcript(ssm, f)
-        
-    # with open(f"{audio_path[:-4]}.srt", "w", encoding="utf-8-sig") as srt:
-    #     write_srt(ssm, srt)
-    
-    
-    # cleanup(temp_path)
-    
-    # del punct_model
-    # torch.cuda.empty_cache()
-    
-    
-    ssm = get_sentences_speaker_mapping(wsm, speaker_ts)
-    # print(ssm)
-    # print(get_speaker_aware_transcript(ssm,))
-    
     
 if __name__ == "__main__":
     whis,msdd,pun = init_models()
     
-    audiopath = '../1696528151059_1000050599709_1028_2224792.mp3'
+    audiopath = '1696528151059_1000050599709_1028_2224792.mp3'
     
     print(process(audio_path=audiopath,whisper_model=whis,msdd_model=msdd,punct_model=pun))
+   
