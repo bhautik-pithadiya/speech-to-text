@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Fetch JSON data
     try {
-        const response = await fetch('/data/results/result.json');
+        const response = await fetch('/static/data/results/result.json');
         jsonData = await response.json();
 
         // Sort jsonData based on the DateTime property in descending order
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function displayUserData(userItem) {
         audioForm.style.display = 'none';
         resultContainer.style.display = 'block';
-        const audioFilePath = `/data/audios/${userItem.id}.wav`;
+        const audioFilePath = `static/data/audios/${userItem.id}.wav`;
         resultParagraph.innerHTML = `
         <div class='audio-center'>    
         <audio controls>

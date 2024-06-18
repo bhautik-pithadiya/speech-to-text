@@ -12,7 +12,7 @@ import shutil
 from src import diarize
 from src import *
 import json
-
+import pytz
 
 
 
@@ -48,7 +48,7 @@ def form_post(request: Request):
 @app.post("/")
 def form_post(audioFile: UploadFile = File(...)):
     unique_id = str(uuid.uuid4())
-    destination_path  = f'data/audios/{unique_id}.wav'
+    destination_path  = f'static/data/audios/{unique_id}.wav'
     try:
         if audioFile:
             with NamedTemporaryFile(delete=True) as temp:
@@ -73,7 +73,7 @@ def form_post(audioFile: UploadFile = File(...)):
             generated_sentiment = sentiment.inference(generated_summary,sentiToken,sentiModel)
             logger.info("            Analysis Done.")
             try:
-                with open('data/results/result.json', 'r') as file:
+                with open('static/data/results/result.json', 'r') as file:
                     try:
                         chat_history = json.load(file)
                     except json.JSONDecodeError:
@@ -81,15 +81,18 @@ def form_post(audioFile: UploadFile = File(...)):
             except FileNotFoundError:
                 chat_history = []
             
+            india_timezone = pytz.timezone('Asia/Kolkata')
+            utc_now = datetime.now(pytz.utc)
+            current_time = utc_now.astimezone(india_timezone)
             response = {"id" :unique_id,
                         'Transcript': transcript,
                         "Summary":generated_summary,
                         'Sentiment':generated_sentiment,
-                       "DateTime": str(datetime.now()) }
+                       "DateTime": current_time.strftime('%Y-%m-%d %H:%M:%S') }
             
             chat_history.insert(0,response)
             
-            with open("data/results/result.json", "w") as file:
+            with open("static/data/results/result.json", "w") as file:
                 json.dump(chat_history, file)
              
 
@@ -99,4 +102,4 @@ def form_post(audioFile: UploadFile = File(...)):
     
 if __name__ == "__main__":
     import uvicorn 
-    uvicorn.run(app,port=8000,host="0.0.0.0")
+    uvicorn.run(app,port=8051,host="0.0.0.0")
