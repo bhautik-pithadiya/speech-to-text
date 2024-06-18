@@ -5,11 +5,12 @@ from tempfile import NamedTemporaryFile
 from fastapi import HTTPException
 from pathlib import Path
 import logging
-
+from datetime import datetime
 from summary_sentiment import summarize,sentiment
-
+import uuid
 from src import diarize
 from src import *
+import json
 
 
 
@@ -45,13 +46,21 @@ def form_post(request: Request):
 
 @app.post("/")
 def form_post(audioFile: UploadFile = File(...)):
+    unique_id = str(uuid.uuid4())
+    file_path = f'data/audios/{unique_id}.wav'
     try:
         if audioFile:
+            # saving to data/audios/....wav
+            
+
             with NamedTemporaryFile(delete=True) as temp:
                 with open(temp.name, 'wb') as temp_file:
                     temp_file.write(audioFile.file.read())
-        
+                
                 transcript = diarize.process(temp.name,whisper_model,msdd_model, punct_model)
+                
+                with open(file_path, 'wb') as temp_file:
+                    temp_file.write(audioFile.file.read())  
             
             logger.info("            Now Summarizing Convesations")
             text = summ_model.clean_text(transcript)
@@ -65,8 +74,28 @@ def form_post(audioFile: UploadFile = File(...)):
             
             generated_sentiment = sentiment.inference(generated_summary,sentiToken,sentiModel)
             logger.info("            Analysis Done.")
+            try:
+                with open('data/results/result.json', 'r') as file:
+                    try:
+                        chat_history = json.load(file)
+                    except json.JSONDecodeError:
+                        chat_history = []
+            except FileNotFoundError:
+                chat_history = []
             
-            return {'Transcript ': transcript,"Summary":generated_summary,'Sentiment':generated_sentiment}
+            response = {"id" :unique_id,
+                        'Transcript ': transcript,
+                        "Summary":generated_summary,
+                        'Sentiment':generated_sentiment,
+                       "DateTime": str(datetime.now()) }
+            
+            chat_history.insert(0,response)
+            
+            with open("data/results/result.json", "w") as file:
+                json.dump(chat_history, file)
+             
+
+            return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
