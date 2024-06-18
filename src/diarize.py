@@ -9,22 +9,29 @@ from pydub import AudioSegment
 from nemo.collections.asr.models.msdd_models import NeuralDiarizer
 from deepmultilingualpunctuation import PunctuationModel
 import re
-from src import *
+# from src import *
+from . import *
 import time
 from datetime import timedelta
 from numba import cuda
+import logging
 import contractions
 import concurrent.futures
 import multiprocessing
 from multiprocessing.pool import ThreadPool
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from itertools import islice
-import tensorflow as tf
 from numba import jit
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
 # Name of the audio file ---> Change it to folder path containing multiple audio files.
 #audio_path = "/home/ksuser/LS/APAK.ai-main/audio_files/1696528455061_1000085836312_1012_2224792.mp3"
 
-torch.set_num_threads(5)
+# torch.set_num_threads(5)
 
 # Whether to enable music removal from speech, helps increase diarization quality but uses alot of ram
 enable_stemming = False
@@ -41,33 +48,22 @@ def init_models():
     ROOT = os.getcwd()
     temp_path = os.path.join(ROOT, "temp_outputs")
     os.makedirs(temp_path, exist_ok=True)
-    whisper_model = WhisperModel(whisper_model_name, device="cpu", compute_type="int8")
-    msdd_model = NeuralDiarizer(cfg=create_config(temp_path)).to("cpu")
+    whisper_model = WhisperModel(whisper_model_name, device="cuda", compute_type="float16")
+    msdd_model = NeuralDiarizer(cfg=create_config(temp_path)).to("cuda")
     punct_model = PunctuationModel(model="kredor/punctuate-all")
     return whisper_model, msdd_model, punct_model
-
-
-def whisper_results_fn(segments):
-    results = []
-    for segment in segments:
-        results.append(segment._asdict())
-    return results
 
 
 def process(audio_path, whisper_model, msdd_model, punct_model):
     
     vocal_target = audio_path
     startTime = time.time()
-    # Run on GPU with FP16
-    # whisper_model = WhisperModel(whisper_model_name, device="cuda", compute_type="int8")
-    # or run on GPU with INT8
-    # whisper_model = WhisperModel(whisper_model_name, device="cuda", compute_type="int8_float16")
-    # or run on CPU with INT8
-    # whisper_model = WhisperModel(whisper_model_name, device="cpu", compute_type="int16")
+    
     if suppress_numerals:
         numeral_symbol_tokens = find_numeral_symbol_tokens(whisper_model.hf_tokenizer)
     else:
         numeral_symbol_tokens = None
+        
     startTime1 = time.time()
     segments, info = whisper_model.transcribe(
         vocal_target,
@@ -76,62 +72,19 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
         suppress_tokens=numeral_symbol_tokens,
         vad_filter=False,
     )
-    print('out of whisper.transcribe')
+    logger.info('       Out of Whisper.transcribe')
     whisper_results = []
     toal_info = []
     
-    # segment_list = list(segments)
-    print('In for loop')
     start = time.time()
-    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
-        whisper_results = executor.map(whisper_results_fn,segments,chunksize=12)
-
-    print(whisper_results)
-    print(str(timedelta(seconds=time.time() - start)))
-    exit()
-    # start = time.time()
-    # batch_size = 5  # Adjust the batch size as needed
-    # i = 1
-    # start = time.time()
-    # for chunk in iter(lambda: list(islice(segments, batch_size)), []):
-    #     print(f'{5 * i}')
-    #     for segment in chunk:
-    #         whisper_results.append(segment._asdict())
-    #     i+=1
-    # end = time.time()
-    
-    
-    
-    
-    # import cProfile
-    # def segLoop(segments=segments):
-    #     whisper_results = []
-    #     for segment in segments:
-    #         whisper_results.append(segment._asdict())
-    
-    
-    # cProfile.run("segLoop()")
-    # whisper_results = list(segments)
-    # iterable_segment = iter(segments)
-    # while True:
-    #     try:
-    #         text = next(iterable_segment)
-    #     except StopIteration:
-    #         break
-    #     else:
-    #         whisper_results.append(text._asdict())
-        
+    for segment in segments:
+        whisper_results.append(segment._asdict())        
     end = time.time()
-    print('Total time in loop - ' ,str(timedelta(seconds= end - start)))
-    # print(whisper_results)
-    with open('res_decorator.json', 'w') as json_file:
-        json.dump(whisper_results,json_file)
-    # with open('res_.json', 'w') as json_file:
-    #     json.dump(segments._asdict(), json_file)          
+    print('Total time in loop - ' ,str(timedelta(seconds= end - start)))      
         
             
     if info.language in wav2vec2_langs:
-        device = "cpu"
+        device = "cuda"
         alignment_model, metadata = whisperx.load_align_model(
             language_code=info.language, device=device
         )
@@ -156,7 +109,7 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     temp_path = os.path.join(ROOT, "temp_outputs")
     os.makedirs(temp_path, exist_ok=True)
     sound.export(os.path.join(temp_path, "mono_file.wav"), format="wav")
-    os.system( f'cp /home/ksuser/noise/whisper-diarization/nemo_msdd_configs/diar_infer_telephonic.yaml "{temp_path}"')
+    os.system( f'cp src/nemo_msdd_configs/diar_infer_telephonic.yaml "{temp_path}"')
 
     # Initialize NeMo MSDD diarization model
     # msdd_model = NeuralDiarizer(cfg=create_config(temp_path))
@@ -254,3 +207,9 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
     # print(get_speaker_aware_transcript(ssm,))
     
     
+if __name__ == "__main__":
+    whis,msdd,pun = init_models()
+    
+    audiopath = '../1696528151059_1000050599709_1028_2224792.mp3'
+    
+    print(process(audio_path=audiopath,whisper_model=whis,msdd_model=msdd,punct_model=pun))

@@ -17,6 +17,8 @@ from paramiko import  SFTPClient
 import paramiko
 
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 # torch.set_num_threads(8)
 
 mtypes = {"cpu": "int8", "cuda": "int8"}
@@ -26,7 +28,7 @@ model_name = "medium.en"
 suppress_numerals = False
 def init_models():
     whisper_model = WhisperModel(
-        model_name, device=device, compute_type=mtypes[device]
+        model_name, device=device, compute_type='float16'
     )
     punct_model = PunctuationModel(model="kredor/punctuate-all")
     return whisper_model, punct_model
@@ -54,21 +56,37 @@ def process(audio_path,whisper_model,punct_model):
         vocal_target = audio_path
     
     
-    # logging.info("Starting Nemo process with vocal_target: ", vocal_target)
+    logging.info("Starting Nemo process with vocal_target: ", vocal_target)
+    
+    startConvert = time.time()
+    sound = AudioSegment.from_file(vocal_target).set_channels(1)
+    ROOT = os.getcwd()
+    temp_path = os.path.join(ROOT, "temp_outputs")
+    os.makedirs(temp_path, exist_ok=True)
+    sound.export(os.path.join(temp_path, "mono_file.wav"), format="wav")
+    endConvert = time.time()
+    print("Time for convert:", str(timedelta(seconds=endConvert - startConvert)))
+    
+    
+    # Initialize NeMo MSDD diarization model
+    msdd_model = NeuralDiarizer(cfg=create_config(temp_path)).to(device)
+    msdd_model.diarize()
+    endMSDD = time.time()
+    print("SD TIme:", str(timedelta(seconds=endMSDD - endConvert)))
     # nemo_process = subprocess.Popen(
     #     ["python3", "nemo_process.py", "-a", vocal_target, "--device", "cpu"],
     # )
-    username='ksuser'
-    password='Mali@123'
-    client = SSHClient()
-    client.load_system_host_keys()
-    transport = paramiko.Transport(('192.168.21.15', 22))
-    transport.connect(username=username, password=password)
-    client.connect('192.168.21.15', username='ksuser', password='Mali@123')
-    stdin, stdout, stderr = client.exec_command("python3 /home/ksuser/Documents/Speech_to_text_api/nemo_process.py -a {} --device cuda".format(vocal_target))
-    # result = stdout.read().decode('ascii').strip("\n")
-    # err = stderr.read().decode('ascii').strip("\n")
-    stdin.close()
+    # username='ksuser'
+    # password='Mali@123'
+    # client = SSHClient()
+    # client.load_system_host_keys()
+    # transport = paramiko.Transport(('192.168.21.15', 22))
+    # transport.connect(username=username, password=password)
+    # client.connect('192.168.21.15', username='ksuser', password='Mali@123')
+    # stdin, stdout, stderr = client.exec_command("python3 /home/ksuser/Documents/Speech_to_text_api/nemo_process.py -a {} --device cuda".format(vocal_target))
+    # # result = stdout.read().decode('ascii').strip("\n")
+    # # err = stderr.read().decode('ascii').strip("\n")
+    # stdin.close()
     # print("OP: ", result)
     # print("ERR: ", err)
     # Run on GPU with FP16
