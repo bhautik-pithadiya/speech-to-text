@@ -51,18 +51,14 @@ def form_post(audioFile: UploadFile = File(...)):
     destination_path  = f'data/audios/{unique_id}.wav'
     try:
         if audioFile:
-            # saving to data/audios/....wav
-            
-
             with NamedTemporaryFile(delete=True) as temp:
                 with open(temp.name, 'wb') as temp_file:
                     temp_file.write(audioFile.file.read())
                 
                 transcript = diarize.process(temp.name,whisper_model,msdd_model, punct_model)
                 
-                shutil.copyfile(temp.name, destination_path)
-                # with open(file_path, 'wb') as temp_file:
-                #     temp_file.write(audioFile.file.read())  
+                # saving to data/audios/....wav
+                shutil.copyfile(temp.name, destination_path) 
             
             logger.info("            Now Summarizing Convesations")
             text = summ_model.clean_text(transcript)
@@ -86,7 +82,7 @@ def form_post(audioFile: UploadFile = File(...)):
                 chat_history = []
             
             response = {"id" :unique_id,
-                        'Transcript ': transcript,
+                        'Transcript': transcript,
                         "Summary":generated_summary,
                         'Sentiment':generated_sentiment,
                        "DateTime": str(datetime.now()) }
