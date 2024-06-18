@@ -7,7 +7,8 @@ from pathlib import Path
 import logging
 from datetime import datetime
 from summary_sentiment import summarize,sentiment
-import uuid
+import uuid, os
+import shutil
 from src import diarize
 from src import *
 import json
@@ -47,7 +48,7 @@ def form_post(request: Request):
 @app.post("/")
 def form_post(audioFile: UploadFile = File(...)):
     unique_id = str(uuid.uuid4())
-    file_path = f'data/audios/{unique_id}.wav'
+    destination_path  = f'data/audios/{unique_id}.wav'
     try:
         if audioFile:
             # saving to data/audios/....wav
@@ -59,8 +60,9 @@ def form_post(audioFile: UploadFile = File(...)):
                 
                 transcript = diarize.process(temp.name,whisper_model,msdd_model, punct_model)
                 
-                with open(file_path, 'wb') as temp_file:
-                    temp_file.write(audioFile.file.read())  
+                shutil.copyfile(temp.name, destination_path)
+                # with open(file_path, 'wb') as temp_file:
+                #     temp_file.write(audioFile.file.read())  
             
             logger.info("            Now Summarizing Convesations")
             text = summ_model.clean_text(transcript)
