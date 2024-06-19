@@ -1,7 +1,9 @@
 from fastapi import FastAPI, Request,File, UploadFile
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from tempfile import NamedTemporaryFile
+from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 from pathlib import Path
 import logging
@@ -15,10 +17,27 @@ import json
 import pytz
 
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 app = FastAPI()
+
+origins = [
+    "http://localhost",
+    "http://0.0.0.0",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://ec2-44-208-238-252.compute-1.amazonaws.com:5500"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
 templates = Jinja2Templates(directory="templates/")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -44,7 +63,19 @@ def form_post(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
+@app.get("/chat_history")
+async def get_chat_history():
+    json_file_path = "static/data/results/result.json"
+    if os.path.exists(json_file_path):
+        with open(json_file_path, "r") as file:
+            data = json.load(file)
+        return JSONResponse(content=data)
+    else:
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
+    
+# @app.get('/audio{}')
+# async def get_audio():
+#     audio_path = 
 @app.post("/")
 def form_post(audioFile: UploadFile = File(...)):
     unique_id = str(uuid.uuid4())
