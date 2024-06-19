@@ -1,3 +1,8 @@
+document.getElementById('toggle-button').addEventListener('click', function() {
+    var sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('hidden');
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     const idList = document.getElementById('id-list');
     const chatBox = document.querySelector('.form_data');
@@ -7,26 +12,37 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let jsonData = [];
 
-    // Fetch JSON data
-    try {
-        const response = await fetch('/data/results/result.json');
-        jsonData = await response.json();
+    // Function to fetch JSON data
+    async function fetchData() {
+        try {
+            const response = await fetch('/data/results/result.json');
+            jsonData = await response.json();
 
-        // Sort jsonData based on the DateTime property in descending order
-        jsonData.sort((a, b) => new Date(b.DateTime) - new Date(a.DateTime));
+            // Sort jsonData based on the DateTime property in descending order
+            jsonData.sort((a, b) => new Date(b.DateTime) - new Date(a.DateTime));
 
-        // Populate ID list
-        jsonData.forEach(item => {
-            const li = document.createElement('li');
-            li.textContent = item.id;
-            li.addEventListener('click', () => {
-                displayUserData(item);
+            // Clear existing ID list
+            idList.innerHTML = '';
+
+            // Populate ID list
+            jsonData.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item.id;
+                li.addEventListener('click', () => {
+                    displayUserData(item);
+                });
+                idList.appendChild(li);
             });
-            idList.appendChild(li);
-        });
-    } catch (error) {
-        console.error('Error fetching JSON data:', error);
+        } catch (error) {
+            console.error('Error fetching JSON data:', error);
+        }
     }
+
+    // Initial fetch of JSON data
+    await fetchData();
+
+    // Refresh JSON data every 5 seconds
+    setInterval(fetchData, 5000);
 
     // Function to display user data
     function displayUserData(userItem) {
@@ -39,10 +55,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <source src="${audioFilePath}" type="audio/wav">
                 Your browser does not support the audio element.
             </audio>
-            </div>
-            <p><strong>Transcript:</strong> ${userItem.Transcript}</p>
-            <p><strong>Summary:</strong> ${userItem.Summary}</p>
-            <p><strong>Sentiment:</strong> ${userItem.Sentiment}</p>
+        </div>
+        <p><strong>Transcript:</strong> ${userItem.Transcript}</p>
+        <p><strong>Summary:</strong> ${userItem.Summary}</p>
+        <p><strong>Sentiment:</strong> ${userItem.Sentiment}</p>
         `;
     }
 

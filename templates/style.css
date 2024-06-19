@@ -11,7 +11,7 @@ body {
     border: 0;
 }
 
-.sidebar {
+/* .sidebar {
     width: 250px;
     background-color: #333;
     color: #fff;
@@ -20,6 +20,7 @@ body {
     box-sizing: border-box;
     position: fixed;
     overflow: scroll;
+    
 }
 
 .sidebar h1 {
@@ -50,66 +51,67 @@ body {
     border: none;
     color: #fff;
     cursor: pointer;
+    
 }
 
 .new-chat-button:hover {
     background-color: #4cae4c;
 }
 
-.form_data {
-    width: 30%;
-    margin: auto;
-    background-color: #fff;
-    padding: 20px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    margin-top: 50px;
-    
+#id-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 20px 0;
 }
 
-h1 {
-    text-align: center;
+#id-list li {
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #444;
+    color: #fff;
+}
+
+#id-list li:hover {
+    background-color: #444;
+} */
+/* Existing CSS for sidebar */
+
+.sidebar {
+    width: 250px;
+    background-color: #333;
+    color: #fff;
+    padding: 20px;
+    height: 100%;
+    box-sizing: border-box;
+    position: fixed;
+    overflow: scroll;
+    transition: transform 0.3s ease; /* Smooth transition */
+    transform: translateX(0); /* Default position */
+}
+
+.sidebar.hidden {
+    transform: translateX(-100%); /* Hide sidebar */
+}
+
+.sidebar h1 {
+    margin: 0;
     margin-bottom: 20px;
 }
 
-.form-group {
-    margin-bottom: 15px;
+.sidebar ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
 }
 
-label {
-    display: block;
-    padding-bottom: 13px;
-    font-weight: bold;
-    text-align: center;
-}
-
-textarea, input[type="text"] {
-    width: 95%;
+.sidebar ul li {
     padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-}
-
-textarea:read-only {
-    background-color: #e9ecef;
-    color: #6c757d;
-}
-
-button {
-    
-    width: 30%;
-    padding: 10px;
-    background-color: #4cae4c;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
     cursor: pointer;
-    margin-top: 20px;
+    border-bottom: 1px solid #444;
 }
 
-button:hover {
-    background-color: #4cae4c;
+.sidebar ul li:hover {
+    background-color: #444;
 }
 
 #id-list {
@@ -129,6 +131,80 @@ button:hover {
     background-color: #444;
 }
 
+/* Styles for the toggle button */
+.toggle-button {
+    font-size: 30px;
+    cursor: pointer;
+    padding: 10px;
+    background-color: transparent;
+    color: #4cae4c;
+    position: fixed;
+    top: 6px;
+    left: 1px;
+    z-index: 1000;
+}
+
+.new-chat-button{
+    width: 91%;
+
+}
+
+.form_data {
+    width: 30%;
+    margin: auto;
+    background-color: #fff;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 50px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    text-align: center;
+}
+
+textarea, input[type="text"], input[type="file"] {
+    width: 95%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+textarea:read-only {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+button {
+    width: 30%;
+    padding: 10px;
+    background-color: #4cae4c;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
+button:hover {
+    background-color: #4cae4c;
+}
+
+
+
 .display-container {
     margin-top: 20px;
 }
@@ -144,18 +220,40 @@ button:hover {
     width: 92px;
     display: flex;
     justify-content: center;
-    margin-left: 173px;
+    
 }
-
-
-.form-header{
+.itt-more-btn{
+    display: flex;
+    justify-content: center;
     text-align: center;
 }
 
-#audioUploadForm{
+.form-header {
     text-align: center;
 }
 
-.audio-center{
+#audioUploadForm {
+    text-align: center;
+}
+
+
+
+.radio-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+}
+
+.radio-buttons input[type="radio"] {
+    margin-right: 5px;
+    
+    
+    margin-bottom: 6px;
+    height: 18px;
+    width: 21px;
+}
+
+.itt-btn{
     text-align: center;
 }
