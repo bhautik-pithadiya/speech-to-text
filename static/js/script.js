@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Function to fetch JSON data
     async function fetchData() {
         try {
-            const response = await fetch('/data/results/result.json');
+            const response = await fetch('/chat_history');
             jsonData = await response.json();
 
             // Sort jsonData based on the DateTime property in descending order
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function displayUserData(userItem) {
         audioForm.style.display = 'none';
         resultContainer.style.display = 'block';
-        const audioFilePath = `/data/audios/${userItem.id}.wav`;
+        const audioFilePath = `/get_audios/${userItem.id}`;
         resultParagraph.innerHTML = `
         <div class='audio-center'>    
         <audio controls>

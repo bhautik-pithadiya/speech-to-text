@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request,File, UploadFile
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.cors  import CORSMiddleware
 from tempfile import NamedTemporaryFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse,FileResponse
 from fastapi import HTTPException
 from pathlib import Path
 import logging
@@ -30,7 +30,7 @@ origins = [
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,7 +53,7 @@ logger.info("            Loading Sentiment Model")
 sentiToken, sentiModel = sentiment.load_sentiment_model()
 logger.info("            Model Loading Complete")
 
-
+json_file_path = "static/data/results/result.json"
 
 @app.get("/")
 def form_post(request: Request):
@@ -65,7 +65,7 @@ def form_post(request: Request):
 
 @app.get("/chat_history")
 async def get_chat_history():
-    json_file_path = "static/data/results/result.json"
+    
     if os.path.exists(json_file_path):
         with open(json_file_path, "r") as file:
             data = json.load(file)
@@ -73,9 +73,15 @@ async def get_chat_history():
     else:
         return JSONResponse(content={"error": "File not found"}, status_code=404)
     
-# @app.get('/audio{}')
-# async def get_audio():
-#     audio_path = 
+@app.get('/get_audios/{id}')
+async def get_audio(id):
+    audio_path =  f"static/data/audios/{id}.wav"
+    
+    if os.path.exists(audio_path):
+          
+        return FileResponse(audio_path)
+    else:
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
 @app.post("/")
 def form_post(audioFile: UploadFile = File(...)):
     unique_id = str(uuid.uuid4())
@@ -104,7 +110,7 @@ def form_post(audioFile: UploadFile = File(...)):
             generated_sentiment = sentiment.inference(generated_summary,sentiToken,sentiModel)
             logger.info("            Analysis Done.")
             try:
-                with open('static/data/results/result.json', 'r') as file:
+                with open(json_file_path, 'r') as file:
                     try:
                         chat_history = json.load(file)
                     except json.JSONDecodeError:
@@ -123,7 +129,7 @@ def form_post(audioFile: UploadFile = File(...)):
             
             chat_history.insert(0,response)
             
-            with open("static/data/results/result.json", "w") as file:
+            with open(json_file_path, "w") as file:
                 json.dump(chat_history, file)
              
 
