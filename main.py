@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from pathlib import Path
 import logging
 from datetime import datetime
-# from summary_sentiment import summarize,sentiment
+from summary_sentiment import summarize,sentiment
 import uuid, os
 import shutil
 from src import diarize
@@ -45,13 +45,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 logger.info("            Loading Diarize Models")
 whisper_model, msdd_model, punct_model = diarize.init_models()
 
-# logger.info("            Loading Summarization Model")
-# summ_model = summarize.Model(model_dict = "summary_sentiment/MEETING-SUMMARY-BART-LARGE-XSUM-SAMSUM-DIALOGSUM-AMI")
-# # summ_model = summarize.Model()
+logger.info("            Loading Summarization Model")
+summ_model = summarize.Model(model_dict = "summary_sentiment/MEETING-SUMMARY-BART-LARGE-XSUM-SAMSUM-DIALOGSUM-AMI")
+# summ_model = summarize.Model()
 
-# logger.info("            Loading Sentiment Model")
-# sentiToken, sentiModel = sentiment.load_sentiment_model()
-# logger.info("            Model Loading Complete")
+logger.info("            Loading Sentiment Model")
+sentiToken, sentiModel = sentiment.load_sentiment_model()
+logger.info("            Model Loading Complete")
 
 json_file_path = "static/data/results/result.json"
 
