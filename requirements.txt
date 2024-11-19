@@ -1,9 +1,6 @@
-nemo-toolkit @ git+https://github.com/NVIDIA/NeMo.git@52d50e9e09a3e636d60535fd9882f3b3f32f92ad
-whisperx @ git+https://github.com/m-bain/whisperx.git
 fastapi
 uvicorn
 pydub
-huggingface-hub
 hydra-core
 inflect
 webdataset
@@ -11,9 +8,9 @@ pybind11
 wheel 
 setuptools 
 fasttext
-youtokentome @ git+https://github.com/gburlet/YouTokenToMe.git@dependencies  
 contractions
 datasets
 nemo_toolkit[all]==1.21   
+huggingface-hub
 ffmpeg
 accelerate

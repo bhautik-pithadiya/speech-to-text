@@ -101,24 +101,24 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
         suppress_tokens=numeral_symbol_tokens,
         vad_filter=False,)
     
-    print(whisper_results)
-    # segments, info = whisper_model.transcribe(
-    #     vocal_target,
-    #     beam_size=5,
-    #     word_timestamps=False,
-    #     suppress_tokens=numeral_symbol_tokens,
-    #     vad_filter=False,
-    # )
+    # print(whisper_results)
+    segments, info = whisper_model.transcribe(
+        vocal_target,
+        beam_size=5,
+        word_timestamps=False,
+        suppress_tokens=numeral_symbol_tokens,
+        vad_filter=False,
+    )
     
-    # logger.info('       Out of Whisper.transcribe')
-    # whisper_results = []
-    # toal_info = []
+    logger.info('       Out of Whisper.transcribe')
+    whisper_results = []
+    toal_info = []
     
-    # start = time.time()
-    # for segment in segments:
-    #     whisper_results.append(segment._asdict())        
-    # end = time.time()
-    # print('Total time in loop - ' ,str(timedelta(seconds= end - start)))      
+    start = time.time()
+    for segment in segments:
+        whisper_results.append(segment._asdict())        
+    end = time.time()
+    print('Total time in loop - ' ,str(timedelta(seconds= end - start)))      
         
             
     if info.language in wav2vec2_langs:
