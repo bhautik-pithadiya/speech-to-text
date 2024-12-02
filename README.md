@@ -40,7 +40,7 @@ python -m pip install git+https://github.com/NVIDIA/NeMo.git@52d50e9e09a3e636d60
 ### **3.2. Install WhisperX**
 Install WhisperX using its GitHub repository:
 ```bash
-python -m pip install whisperx @ git+https://github.com/m-bain/whisperx.git
+python -m pip install git+https://github.com/m-bain/whisperx.git
 ```
 
 ---
