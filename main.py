@@ -8,7 +8,8 @@ from fastapi import HTTPException
 from pathlib import Path
 import logging
 from datetime import datetime
-from summary_sentiment import summarize,sentiment
+# from summary_sentiment import summarize,sentiment
+from summary_sentiment.summarize import summarize
 import uuid, os
 import shutil
 from src import diarize
@@ -45,12 +46,12 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 logger.info("            Loading Diarize Models")
 whisper_model, msdd_model, punct_model = diarize.init_models()
 
-logger.info("            Loading Summarization Model")
-summ_model = summarize.Model(model_dict = "summary_sentiment/MEETING-SUMMARY-BART-LARGE-XSUM-SAMSUM-DIALOGSUM-AMI")
+# logger.info("            Loading Summarization Model")
+# summ_model = summarize.Model(model_dict = "summary_sentiment/MEETING-SUMMARY-BART-LARGE-XSUM-SAMSUM-DIALOGSUM-AMI")
 # summ_model = summarize.Model()
 
-logger.info("            Loading Sentiment Model")
-sentiToken, sentiModel = sentiment.load_sentiment_model()
+# logger.info("            Loading Sentiment Model")
+# sentiToken, sentiModel = sentiment.load_sentiment_model()
 logger.info("            Model Loading Complete")
 
 json_file_path = "static/data/results/result.json"
@@ -98,16 +99,16 @@ def form_post(audioFile: UploadFile = File(...)):
                 shutil.copyfile(temp.name, destination_path) 
             
             logger.info("            Now Summarizing Convesations")
-            text = summ_model.clean_text(transcript)
+            # text = transcript
             
-            generated_summary = summ_model.summary(text)
+            generated_summary =summarize(transcript)
             
             if generated_summary!="":
                 logger.info("            Summary Generated.")
                 
-            logger.info("            Sentiment Analysis")
+            # logger.info("            Sentiment Analysis")
             
-            generated_sentiment = sentiment.inference(generated_summary,sentiToken,sentiModel)
+            # generated_sentiment = sentiment.inference(generated_summary,sentiToken,sentiModel)
             logger.info("            Analysis Done.")
             try:
                 with open(json_file_path, 'r') as file:
@@ -124,7 +125,7 @@ def form_post(audioFile: UploadFile = File(...)):
             response = {"id" :unique_id,
                         'Transcript': transcript,
                         "Summary":generated_summary,
-                        'Sentiment':generated_sentiment,
+                        # 'Sentiment':generated_sentiment,
                        "DateTime": current_time.strftime('%Y-%m-%d %H:%M:%S') }
             
             chat_history.insert(0,response)
