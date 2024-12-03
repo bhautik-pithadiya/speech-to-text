@@ -51,7 +51,13 @@ To install `youtokentome`, follow these steps:
     ```bash
     pip install Cython
     ```
-2. Install **youtokentome**:
+
+2. Upgrade wheel
+    ```bash
+    pip install wheel --upgrade
+    ```
+
+3. Install **youtokentome**:
     ```bash
     pip install youtokentome
     ```

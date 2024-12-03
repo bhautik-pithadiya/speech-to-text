@@ -226,7 +226,7 @@ def process(audio_path, whisper_model, msdd_model, punct_model):
 if __name__ == "__main__":
     whis,msdd,pun = init_models()
     
-    audiopath = '1696528151059_1000050599709_1028_2224792.mp3'
+    audiopath = './1696528151059_1000050599709_1028_2224792.mp3'
     
     print(process(audio_path=audiopath,whisper_model=whis,msdd_model=msdd,punct_model=pun))
    
