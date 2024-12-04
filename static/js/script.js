@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         <p><strong>Transcript:</strong> ${userItem.Transcript}</p>
         <p><strong>Summary:</strong> ${userItem.Summary}</p>
-        <p><strong>Sentiment:</strong> ${userItem.Sentiment}</p>
+        <p><strong>Time Taken:</strong> ${userItem.TimeTaken}</p>
         `;
     }
 

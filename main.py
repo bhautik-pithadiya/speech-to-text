@@ -12,6 +12,8 @@ from datetime import datetime
 from summary_sentiment.summarize import summarize
 import uuid, os
 import shutil
+import time
+from datetime import timedelta
 from src import diarize
 from src import *
 import json
@@ -85,6 +87,9 @@ async def get_audio(id):
         return JSONResponse(content={"error": "File not found"}, status_code=404)
 @app.post("/")
 def form_post(audioFile: UploadFile = File(...)):
+    india_timezone = pytz.timezone('Asia/Kolkata')
+    utc_now = datetime.now(pytz.utc)
+    startTime = time.time()
     unique_id = str(uuid.uuid4())
     destination_path  = f'static/data/audios/{unique_id}.wav'
     try:
@@ -119,14 +124,14 @@ def form_post(audioFile: UploadFile = File(...)):
             except FileNotFoundError:
                 chat_history = []
             
-            india_timezone = pytz.timezone('Asia/Kolkata')
-            utc_now = datetime.now(pytz.utc)
-            current_time = utc_now.astimezone(india_timezone)
+            endTime = time.time()
+            currentTime = utc_now.astimezone(india_timezone)
             response = {"id" :unique_id,
                         'Transcript': transcript,
                         "Summary":generated_summary,
                         # 'Sentiment':generated_sentiment,
-                       "DateTime": current_time.strftime('%Y-%m-%d %H:%M:%S') }
+                        "TimeTaken":str(timedelta(seconds=endTime - startTime)),
+                       "DateTime": currentTime.strftime('%Y-%m-%d %H:%M:%S') }
             
             chat_history.insert(0,response)
             

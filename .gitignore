@@ -2,3 +2,7 @@
 __pycache__
 .vscode
 .env
+
+# files wav files
+static/data
+temp_outputs
